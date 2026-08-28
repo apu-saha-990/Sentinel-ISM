@@ -1,0 +1,35 @@
+# Sentinel baseline policy — v1.0
+# Defines what "compliant" looks like for each of the six controls.
+# Values here are placeholders to be filled in once sentinel-server exists
+# and we know its real starting state (allow-lists, sudoers, etc).
+
+controls:
+  ISM-0383:
+    description: "Unneeded accounts/services disabled"
+    allowed_accounts: []      # TODO: fill in once VM exists — real user list
+    allowed_services: []      # TODO: fill in once VM exists — real systemd unit list
+
+  ISM-1508:
+    description: "Privileged access limited to what's required"
+    allowed_sudoers: []       # TODO: fill in once VM exists
+
+  ISM-0584:
+    description: "Logon, failed logon, and logoff events are logged"
+    log_path: "/var/log/auth.log"
+    must_exist: true
+    must_not_be_empty: true
+
+  ISM-1985:
+    description: "Event logs protected from unauthorised access"
+    log_path: "/var/log/auth.log"
+    max_permissions: "640"    # not world-readable
+
+  ISM-1815:
+    description: "Event logs protected from unauthorised modification/deletion"
+    log_path: "/var/log/auth.log"
+    must_not_be_world_writable: true
+
+  ISM-0988:
+    description: "An accurate and consistent time source is used"
+    require_service: "systemd-timesyncd"   # or chrony, confirm once VM exists
+    require_synced: true
