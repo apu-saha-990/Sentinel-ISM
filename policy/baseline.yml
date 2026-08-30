@@ -3,6 +3,13 @@
 # systemd-journald. The ISM-0584 check queries journalctl directly
 # (grep on pam_unix) rather than checking for a flat log file.
 
+log_permissions:
+  # ISM-1985 / ISM-1815 target: the systemd journal files, not /var/log/auth.log
+  # (see ISM-0584 note — this system has no rsyslog/auth.log).
+  # Path includes a random per-machine ID directory, so we glob rather than
+  # hardcode the full path.
+  journal_glob: "/var/log/journal/*/*.journal"
+
 accounts:
   # Any account with a real login shell (/bin/bash, /bin/sh) not in this list is a finding.
   # System/service accounts (nologin, /bin/false, /bin/sync) are checked structurally,

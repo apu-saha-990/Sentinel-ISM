@@ -68,6 +68,29 @@ PASS or FAIL
 
 **Currently expected result (as of 2026-08-30):** PASS.
 
+
+
+## Run the ISM-1985 / ISM-1815 check (log permissions)
+
+**Run this on ArtX (the host) — never on the VM itself.**
+
+```bash
+cd ~/Sentinel-ISM
+python3 collector/checks/log_permissions.py
+```
+
+**Note:** targets the systemd journal files (`/var/log/journal/<machine-id>/*.journal`), not `/var/log/auth.log` — same reason as ISM-0584 (no rsyslog on this system).
+
+**Expected output shape:**
+ISM-1985 / ISM-1815 — Event logs protected from unauthorised access and modification
+PASS or FAIL
+
+(list of findings, if any)
+Files checked: (path and mode for each journal file)
+
+**Currently expected result (as of 2026-08-30):** PASS.
+
+
 ## Troubleshooting
 
 - **"Connection refused" / SSH hangs:** sentinel-server's IP is DHCP-assigned and can change on lease renewal. Check the real current IP by logging into the VM console directly and running `ip a`, then update `SENTINEL_SERVER_HOST` in `.env` if it's changed.
