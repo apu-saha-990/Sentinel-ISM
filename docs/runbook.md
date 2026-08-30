@@ -8,6 +8,36 @@ Exact commands for running any part of the scanner. This exists so "what do I ac
 - `SENTINEL_SERVER_SSH_KEY`, `SENTINEL_SERVER_HOST`, `SENTINEL_SERVER_USER` set in `.env` (git-ignored, never committed)
 - PyYAML installed on ArtX: `python3 -c "import yaml"` should not error. If it does: `pip install pyyaml --break-system-packages`
 
+
+## Run the full scan (all six controls at once) — "sentinel scan"
+
+**Run this on ArtX (the host) — never on the VM itself.**
+
+```bash
+cd ~/Sentinel-ISM
+python3 -m collector.collector
+```
+
+**Important:** must use `-m collector.collector` (module syntax), not `python3 collector/collector.py` — the package-style imports (`policy.engine` importing `collector.checks.*`) only resolve correctly when run as a module from the repo root.
+
+**Expected output shape:**
+
+============================================================
+Sentinel — ISM Compliance Scan
+
+[PASS/FAIL] ISM-XXXX — description
+
+(findings, if any)
+...
+
+**Currently expected result (as of 2026-08-30):** 4/5 checks passed, 5/6 controls passed. ISM-0383 fails with 2 known, deliberate findings (`multipathd.service`, `snapd.service` — see learning log). All other checks pass.
+
+The individual check sections below still apply if you want to run just one control at a time for debugging — the underlying `collect()` functions are unchanged, they're just called by `policy/engine.py` now instead of run standalone.
+
+
+
+
+
 ## Run the ISM-0383 check (accounts/services)
 
 **Run this on ArtX (the host) — never on the VM itself.** The script SSHes *out* to sentinel-server; it doesn't run there.
