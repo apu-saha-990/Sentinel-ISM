@@ -1,3 +1,8 @@
+# ISM-0584 note (2026-08-30): this VM has no rsyslog installed and no
+# /var/log/auth.log file — login events are recorded only via
+# systemd-journald. The ISM-0584 check queries journalctl directly
+# (grep on pam_unix) rather than checking for a flat log file.
+
 accounts:
   # Any account with a real login shell (/bin/bash, /bin/sh) not in this list is a finding.
   # System/service accounts (nologin, /bin/false, /bin/sync) are checked structurally,
