@@ -27,4 +27,8 @@ services:
     - user@1000.service
 
 sudoers:
-  allowed_members: []  # ISM-1508 — separate check, not populated yet, out of scope here
+  # Real sudo group membership pulled from sentinel-server on 2026-08-30.
+  # Only 'sentinel' is expected — root has access inherently (not via this group),
+  # and no custom /etc/sudoers.d rules exist beyond Ubuntu's default README.
+  allowed_members:
+    - sentinel

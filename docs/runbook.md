@@ -18,3 +18,18 @@ python3 collector/checks/accounts_services.py
 ```
 
 **Expected output shape:**
+
+## Run the ISM-1508 check (sudoers)
+
+**Run this on ArtX (the host) — never on the VM itself.**
+
+```bash
+cd ~/Sentinel-ISM
+python3 collector/checks/sudoers.py
+```
+
+**Expected output shape:**
+
+**Currently expected result (as of 2026-08-30):** PASS, 0 findings.
+
+
