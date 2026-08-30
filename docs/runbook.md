@@ -91,6 +91,24 @@ Files checked: (path and mode for each journal file)
 **Currently expected result (as of 2026-08-30):** PASS.
 
 
+
+## Run the ISM-0988 check (time sync)
+
+**Run this on ArtX (the host) — never on the VM itself.**
+
+```bash
+cd ~/Sentinel-ISM
+python3 collector/checks/time_sync.py
+```
+
+**Expected output shape:**
+ISM-0988 — An accurate and consistent time source is used
+PASS or FAIL
+
+(list of findings, if any)
+Status: (clock sync state, NTP service state, time zone)
+
+
 ## Troubleshooting
 
 - **"Connection refused" / SSH hangs:** sentinel-server's IP is DHCP-assigned and can change on lease renewal. Check the real current IP by logging into the VM console directly and running `ip a`, then update `SENTINEL_SERVER_HOST` in `.env` if it's changed.
