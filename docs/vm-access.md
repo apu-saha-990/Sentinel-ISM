@@ -18,3 +18,4 @@ Real secrets live only in `.env` (git-ignored, never committed).
 ## Notes
 - `.env` is in `.gitignore` — confirm with `git check-ignore .env` before ever committing anything, if unsure.
 - Consider switching to SSH key-based auth for both VMs once basic access is confirmed working, to reduce password reliance.
+- SSH key: see `SENTINEL_SERVER_SSH_KEY` in `.env` (passwordless key-based auth, set up 2026-08-30)

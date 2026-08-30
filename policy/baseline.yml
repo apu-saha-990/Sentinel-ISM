@@ -1,35 +1,30 @@
-# Sentinel baseline policy — v1.0
-# Defines what "compliant" looks like for each of the six controls.
-# Values here are placeholders to be filled in once sentinel-server exists
-# and we know its real starting state (allow-lists, sudoers, etc).
+accounts:
+  # Any account with a real login shell (/bin/bash, /bin/sh) not in this list is a finding.
+  # System/service accounts (nologin, /bin/false, /bin/sync) are checked structurally,
+  # not by name — a minimized install adds/removes these on its own.
+  allowed_login_shells:
+    - root
+    - sentinel
 
-controls:
-  ISM-0383:
-    description: "Unneeded accounts/services disabled"
-    allowed_accounts: []      # TODO: fill in once VM exists — real user list
-    allowed_services: []      # TODO: fill in once VM exists — real systemd unit list
+services:
+  # Currently active/running services confirmed as expected on sentinel-server.
+  # multipathd.service and snapd.service are deliberately NOT included below —
+  # they were running at baseline capture time but not yet justified for this VM's role.
+  # Leaving them off means the scanner correctly flags them as findings until a decision is made.
+  allowed_active:
+    - chrony.service
+    - dbus.service
+    - getty@tty1.service
+    - networkd-dispatcher.service
+    - polkit.service
+    - ssh.service
+    - systemd-journald.service
+    - systemd-logind.service
+    - systemd-networkd.service
+    - systemd-resolved.service
+    - systemd-udevd.service
+    - unattended-upgrades.service
+    - user@1000.service
 
-  ISM-1508:
-    description: "Privileged access limited to what's required"
-    allowed_sudoers: []       # TODO: fill in once VM exists
-
-  ISM-0584:
-    description: "Logon, failed logon, and logoff events are logged"
-    log_path: "/var/log/auth.log"
-    must_exist: true
-    must_not_be_empty: true
-
-  ISM-1985:
-    description: "Event logs protected from unauthorised access"
-    log_path: "/var/log/auth.log"
-    max_permissions: "640"    # not world-readable
-
-  ISM-1815:
-    description: "Event logs protected from unauthorised modification/deletion"
-    log_path: "/var/log/auth.log"
-    must_not_be_world_writable: true
-
-  ISM-0988:
-    description: "An accurate and consistent time source is used"
-    require_service: "systemd-timesyncd"   # or chrony, confirm once VM exists
-    require_synced: true
+sudoers:
+  allowed_members: []  # ISM-1508 — separate check, not populated yet, out of scope here
