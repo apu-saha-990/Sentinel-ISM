@@ -11,7 +11,7 @@ Real secrets live only in `.env` (git-ignored, never committed).
 - OpenSSH server: installed during Ubuntu Server setup
 
 ## sentinel-endpoint
-- Host/IP: 192.168.122.170 (DHCP-assigned via libvirt default NAT network, enp1s0) — also see `SENTINEL_ENDPOINT_HOST` in `.env`
+- Host/IP: 192.168.100.11 (static, on isolated Sentinel-Lab libvirt network, virbr1) — also see `SENTINEL_ENDPOINT_HOST` in `.env`
 - Hostname: sentinel-endpoint
 - SSH user: sentinelendpoint — see `SENTINEL_ENDPOINT_USER` in `.env`
 - Password: see `SENTINEL_ENDPOINT_PASSWORD` in `.env`

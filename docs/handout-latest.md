@@ -84,3 +84,27 @@ Two options, Apu's choice:
 - **sentinel-server currently has 2 extra accounts beyond baseline** (`testuser1`, `testuser2`) — this is why `sentinel scan` shows more ISM-0383 findings than the original 2 (multipathd/snapd). This is expected given the verification exercise, not a new bug.
 - **sentinel-server's IP** (`192.168.122.126`) is still DHCP-assigned and can drift — check `docs/runbook.md`'s troubleshooting section if a scan suddenly can't connect.
 - **v1.1 will need a second VM** (`sentinel-endpoint`) and an isolated lab network with static IPs on both VMs — this is new environment work, not code work, as the first step.
+
+# Sentinel — Session Handout — 2026-08-30 (v1.1 start)
+
+**Current version/stage:** v1.1, early stage — sentinel-endpoint VM built, isolated network and central record not yet done
+
+**Done this session:**
+- Built sentinel-endpoint VM in virt-manager: 2 vCPU / 4096 MiB RAM / 30GB disk, Ubuntu Server 26.04.1 LTS (minimized), matching sentinel-server's install pattern
+- Installed OpenSSH server during setup (checked the box this time, unlike default)
+- Confirmed SSH access from ArtX: `ssh sentinelendpoint@192.168.122.170` (password auth first, then switched to key-based)
+- Reused sentinel-server's existing SSH key (`~/.ssh/sentinel_server_key`) for sentinel-endpoint via `ssh-copy-id` — confirmed passwordless login works
+- Updated `docs/vm-access.md` with real sentinel-endpoint host/user/key references (no secrets in the file itself)
+- Added SENTINEL_ENDPOINT_HOST, SENTINEL_ENDPOINT_USER, SENTINEL_ENDPOINT_PASSWORD, SENTINEL_ENDPOINT_SSH_KEY to local `.env`
+
+**Currently broken / unresolved:**
+- Nothing broken. bug-report.md still shows 1 bug fixed, 0 open (BUG-001 only).
+
+**Next step:**
+Build the isolated lab network with static IPs on both VMs (v1.1 build plan, environment work before any new code). Both VMs are currently still on the default NAT/DHCP network (sentinel-server: 192.168.122.126, sentinel-endpoint: 192.168.122.170) — this step changes that.
+
+**Anything the next session needs to know before touching code:**
+- sentinel-endpoint disk is 25GB→ wait, actually 30GB (matches plan) — confirmed during install, no deviation to note.
+- sentinel-endpoint username is `sentinelendpoint` (not `sentinel` like the other VM) — different username between the two hosts, worth remembering when scripting against both.
+- Switching network config on a live SSH session risks locking yourself out mid-change — go slowly, verify each VM is still reachable before moving to the next config change.
+- No learning log entry written yet for v1.1 — should be added before v1.1 is called complete, per project rules.
