@@ -1,5 +1,4 @@
-STATUS: v1.1, network migration complete, two-host scanning working, central results record built and verified on both hosts, 2 bugs fixed, 0 open
-
+STATUS: v1.1 COMPLETE — two-host scanning, per-host baselines, central results record, and deliberate-change detection all verified against real VM state. 2 bugs fixed, 0 open.
 # Sentinel — Bug Report
 
 This file is append-only. Fixed bugs stay in the record — never delete or rewrite past entries.

@@ -204,3 +204,30 @@ The deliberate-change detection test on sentinel-endpoint: add a real sudo user 
 - `record/db.py` is not run standalone — it's only called from `collector.py`. Any new script that needs to read scan history should import `get_connection()` from `record/db.py` rather than opening the SQLite file directly.
 - The authoritative results database is on sentinel-server (`~/sentinel-record/results.db`), not the ArtX copy — the ArtX copy is just the working copy before each transfer.
 - Once the deliberate-change test is done, the only other item before v1.1 can be called complete per the build plan is nothing else — that test is the last piece.
+
+# Sentinel — Session Handout — 2026-09-05 (v1.1 complete)
+
+**Current version/stage:** v1.1 — COMPLETE. Ready to begin v1.2 (per docs/roadmap.md).
+
+**Done this session:**
+- Ran the deliberate-change detection test on sentinel-endpoint: created a real account (`breaktest`), added it to sudo group
+- Confirmed the scan correctly caught it under both ISM-0383 (unlisted account) and ISM-1508 (unlisted sudo member), with sentinel-server's report unaffected
+- Decision: `breaktest` kept permanently as an open finding, same pattern as testuser1/testuser2/multipathd/snapd
+- Updated docs/learning-log/v1.0.md, docs/bugs/bug-report.md (status line marking v1.1 complete)
+
+**v1.1 "complete when" criteria (from build plan) — MET:**
+A report from sentinel-server correctly shows compliance status of both hosts, and a deliberate real change on sentinel-endpoint is correctly detected as a new finding. Both demonstrated with real, non-simulated changes.
+
+**Currently broken / unresolved:**
+- Nothing broken. bug-report.md shows 2 bugs fixed, 0 open.
+- Open, non-bug items (all deliberate, kept visible on purpose): testuser1/testuser2 (sentinel-server), breaktest (sentinel-endpoint), multipathd/snapd (both hosts)
+
+**Next step:**
+Apu's choice — v1.1 is genuinely done, so this is a real decision point:
+1. Begin v1.2 (Alerting) per docs/roadmap.md
+2. Pause here and prep the ASD application pitch now that v1.1 is real and complete (build plan's panel narrative section can now honestly claim v1.1, not just v1.0)
+
+**Anything the next session needs to know before touching code:**
+- Every learning-log entry for both v1.0 and v1.1 lives in one file: docs/learning-log/v1.0.md (never renamed to v1.1.md despite the folder structure sketch in the build plan suggesting separate files)
+- Central results record: authoritative copy on sentinel-server at ~/sentinel-record/results.db, local working copy at record/sentinel_results.db on ArtX (gitignored, rebuilt every scan)
+- No code changes needed for the next version until v1.2 scope is actually decided — don't start alerting work speculatively
