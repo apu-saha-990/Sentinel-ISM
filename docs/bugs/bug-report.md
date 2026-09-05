@@ -1,4 +1,4 @@
-STATUS: v1.1, network migration complete (both VMs static IP on Sentinel-Lab), two-host scanning working, 2 bugs fixed, 0 open
+STATUS: v1.1, network migration complete, two-host scanning working, central results record built and verified on both hosts, 2 bugs fixed, 0 open
 
 # Sentinel — Bug Report
 

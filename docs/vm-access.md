@@ -12,6 +12,8 @@ Real secrets live only in `.env` (git-ignored, never committed).
 - SSH key: see `SENTINEL_SERVER_SSH_KEY` in `.env` (passwordless key-based auth, set up 2026-08-30)
 - OpenSSH server: installed during Ubuntu Server setup
 
+- Central results record: `~/sentinel-record/results.db` (SQLite, pushed here by collector.py after every scan — see record/db.py)
+
 ## sentinel-endpoint
 - Host/IP: 192.168.100.11 (static, on Sentinel-Lab network, virbr1, enp1s0) — also see `SENTINEL_ENDPOINT_HOST` in `.env`
 - Hostname: sentinel-endpoint

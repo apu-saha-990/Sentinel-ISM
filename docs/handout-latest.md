@@ -180,3 +180,27 @@ Repeat the same migration on sentinel-server: switch its NIC to `Sentinel-Lab` (
 - `docs/roadmap.md` exists as an untracked file per the last `git status` — not part of today's work, just noting it's sitting there uncommitted if that wasn't intentional.
 - `.env` had duplicate blank `SENTINEL_ENDPOINT_*` lines removed this session — if `.env` ever needs recreating from scratch, don't reintroduce that duplication.
 
+
+# Sentinel — Session Handout — 2026-09-05 (central record)
+
+**Current version/stage:** v1.1, in progress — central record of results built and verified, deliberate-change test not yet done
+
+**Done this session:**
+- Built `record/db.py`: local SQLite database (three tables — scan_runs, control_results, findings) recording every scan's results
+- Added `copy_file_to_remote()` to `collector/ssh_utils.py`; updated `collector/collector.py` to write each host's results to the database and push the finished file to sentinel-server via SCP after every run
+- Verified end to end: database created correctly on ArtX, identical copy confirmed on sentinel-server at `~/sentinel-record/results.db`, all three tables checked directly and contain correct, correctly-linked data
+- Noted `systemd-timedated.service` now also appears transiently on sentinel-server (previously only seen on sentinel-endpoint) — same D-Bus-activation explanation, not a bug
+- Decided `record/*.db` stays out of git (already covered by existing `*.db` rule in `.gitignore`); confirmed with `git check-ignore`
+- Updated `docs/learning-log/v1.1.md`, `docs/bugs/bug-report.md` (status line), `docs/vm-access.md`
+- Committed and pushed: [fill in commit hash once pushed]
+
+**Currently broken / unresolved:**
+- Nothing broken. bug-report.md still shows 2 bugs fixed, 0 open.
+
+**Next step:**
+The deliberate-change detection test on sentinel-endpoint: add a real sudo user (or similar out-of-baseline change) on sentinel-endpoint, run the scan, and confirm it's correctly caught as a new ISM-1508 (or relevant control) finding. This is the last outstanding item for v1.1's "complete when" criteria per the build plan.
+
+**Anything the next session needs to know before touching code:**
+- `record/db.py` is not run standalone — it's only called from `collector.py`. Any new script that needs to read scan history should import `get_connection()` from `record/db.py` rather than opening the SQLite file directly.
+- The authoritative results database is on sentinel-server (`~/sentinel-record/results.db`), not the ArtX copy — the ArtX copy is just the working copy before each transfer.
+- Once the deliberate-change test is done, the only other item before v1.1 can be called complete per the build plan is nothing else — that test is the last piece.
