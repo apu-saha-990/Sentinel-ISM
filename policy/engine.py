@@ -2,19 +2,22 @@
 Sentinel — Policy Engine
 
 Central comparison logic for all six ISM controls. Each collector/checks/*.py
-module only gathers raw state from sentinel-server; every allow-list
+module only gathers raw state from a target host; every allow-list
 comparison and pass/fail judgment happens here, against policy/baseline.yml.
 
-This replaces an earlier design where each check script did its own
-comparison inline — centralizing it here matches the build plan's intended
-split (collector = data gathering, policy = comparison) and means every
-compliance rule lives in one place, not scattered across five files.
+As of v1.1, baseline.yml has per-host sections under `hosts:` (accounts,
+services, sudoers) since sentinel-server and sentinel-endpoint have
+different expected usernames and service lists. log_permissions stays
+shared at the top level since the journal path pattern is the same on both.
+
+run_all_checks() takes host/user/ssh_key/host_label as parameters — the
+caller (collector.py) decides which host to point it at and which baseline
+section to compare against.
 """
 
 import yaml
 
 from collector.checks import accounts_services, sudoers, auth_log, log_permissions, time_sync
-from collector.ssh_utils import load_env
 
 NON_LOGIN_SHELLS = {"/usr/sbin/nologin", "/bin/false", "/bin/sync", "/sbin/nologin"}
 
@@ -24,10 +27,11 @@ def load_baseline(baseline_path="policy/baseline.yml"):
         return yaml.safe_load(f)
 
 
-def evaluate_accounts_services(data, baseline):
+def evaluate_accounts_services(data, baseline, host_label):
     findings = []
+    host_baseline = baseline["hosts"][host_label]
 
-    allowed_login_shells = baseline["accounts"]["allowed_login_shells"]
+    allowed_login_shells = host_baseline["accounts"]["allowed_login_shells"]
     for username, shell in data["accounts"]:
         if shell in NON_LOGIN_SHELLS:
             continue
@@ -36,7 +40,7 @@ def evaluate_accounts_services(data, baseline):
                 f"Account '{username}' has login shell '{shell}' but is not on the allow-list"
             )
 
-    allowed_active = baseline["services"]["allowed_active"]
+    allowed_active = host_baseline["services"]["allowed_active"]
     for service in data["running_services"]:
         if service not in allowed_active:
             findings.append(f"Service '{service}' is running but not on the allow-list")
@@ -49,9 +53,9 @@ def evaluate_accounts_services(data, baseline):
     }
 
 
-def evaluate_sudoers(data, baseline):
+def evaluate_sudoers(data, baseline, host_label):
     findings = []
-    allowed_members = baseline["sudoers"]["allowed_members"]
+    allowed_members = baseline["hosts"][host_label]["sudoers"]["allowed_members"]
     for member in data["sudo_group_members"]:
         if member not in allowed_members:
             findings.append(f"'{member}' is a member of the sudo group but is not on the allow-list")
@@ -131,22 +135,18 @@ def evaluate_time_sync(data):
     }
 
 
-def run_all_checks():
-    """Collect real state from sentinel-server and evaluate all six controls."""
-    env = load_env()
+def run_all_checks(host, user, ssh_key, host_label):
+    """Collect real state from the given host and evaluate all six controls
+    against that host's own baseline section."""
     baseline = load_baseline()
-
-    host = env["SENTINEL_SERVER_HOST"]
-    user = env["SENTINEL_SERVER_USER"]
-    ssh_key = env["SENTINEL_SERVER_SSH_KEY"]
 
     results = []
 
     accounts_data = accounts_services.collect(host, user, ssh_key)
-    results.append(evaluate_accounts_services(accounts_data, baseline))
+    results.append(evaluate_accounts_services(accounts_data, baseline, host_label))
 
     sudoers_data = sudoers.collect(host, user, ssh_key)
-    results.append(evaluate_sudoers(sudoers_data, baseline))
+    results.append(evaluate_sudoers(sudoers_data, baseline, host_label))
 
     auth_log_data = auth_log.collect(host, user, ssh_key)
     results.append(evaluate_auth_log(auth_log_data))

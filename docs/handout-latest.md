@@ -108,3 +108,75 @@ Build the isolated lab network with static IPs on both VMs (v1.1 build plan, env
 - sentinel-endpoint username is `sentinelendpoint` (not `sentinel` like the other VM) — different username between the two hosts, worth remembering when scripting against both.
 - Switching network config on a live SSH session risks locking yourself out mid-change — go slowly, verify each VM is still reachable before moving to the next config change.
 - No learning log entry written yet for v1.1 — should be added before v1.1 is called complete, per project rules.
+
+# Sentinel — Session Handout — 2026-08-31
+
+**Current version/stage:** v1.1, in progress — isolated network migration started, sentinel-endpoint done, sentinel-server not yet done
+
+**Done this session:**
+- Created new isolated libvirt network "Sentinel-Lab" (device `virbr1`, subnet `192.168.100.0/24`, DHCP range `.128–.254`, NAT forwarding) — separate from the original `default` network (`virbr0`, `192.168.122.0/24`) both VMs were on
+- Switched sentinel-endpoint's NIC from `default` to `Sentinel-Lab` via virt-manager hardware settings (VM was shut off at the time, zero risk)
+- Booted sentinel-endpoint, confirmed it picked up a DHCP address on the new network via console (`192.168.100.163`)
+- Wrote a static netplan config for sentinel-endpoint: static IP `192.168.100.11/24`, gateway `192.168.100.1` (the Sentinel-Lab bridge), DNS `8.8.8.8`/`8.8.4.4`
+- **Learned the hard way:** typing multi-line YAML directly into the VM console loses indentation (console doesn't preserve leading spaces reliably) — the fix was writing the netplan file on ArtX instead (where paste/indentation works normally), then `scp`-ing it to the VM and moving it into place with `sudo cp` over SSH
+- Applied the new netplan config (`sudo netplan apply`) — this dropped the old SSH session (expected, since the IP changed mid-session) — reconnected successfully on the new static IP `192.168.100.11` using the same SSH key as before
+- Confirmed internet access still works on the isolated network via `curl` (got HTTP 200 from archive.ubuntu.com) — `ping` isn't available on this minimized install, not installed just for this check
+- Updated `docs/vm-access.md`: sentinel-endpoint's Host/IP now shows `192.168.100.11` (static, on Sentinel-Lab, virbr1)
+- Updated local `.env`: `SENTINEL_ENDPOINT_HOST` changed to `192.168.100.11`
+- Committed and pushed: `docs/vm-access.md` and `docs/handout-latest.md` (commit `5d8c770`)
+
+**Currently broken / unresolved:**
+- Nothing broken. One terminal window on ArtX got stuck on a dead SSH session after the netplan apply (expected side effect of changing the IP mid-session) — harmless, just close it, a fresh terminal connected fine.
+- **sentinel-server is still on the old `default` NAT network** at `192.168.122.126` — not yet migrated. This is the main unfinished piece of the network step.
+
+**Next step:**
+Repeat the same migration on sentinel-server: switch its NIC to `Sentinel-Lab` (VM must be shut off first), assign static IP `192.168.100.10/24` (reserved, not yet used), same gateway (`192.168.100.1`) and DNS (`8.8.8.8`/`8.8.4.4`) as sentinel-endpoint. Use the same "write netplan file on ArtX, scp it over, sudo cp into place" method — don't try typing YAML directly into the VM console again.
+
+**Anything the next session needs to know before touching code:**
+- **Static IP plan:** sentinel-server → `192.168.100.10`, sentinel-endpoint → `192.168.100.11` (already done). Keep this convention for any future hosts.
+- **Netplan file path on both VMs:** `/etc/netplan/00-installer-config.yaml`
+- **sentinel-endpoint's MAC address** (needed if rewriting its netplan again): `52:54:00:30:5e:a7` — sentinel-server's MAC will need to be checked fresh (`ip a` on its console) since it hasn't been recorded yet on the new network.
+- **`nano` is not installed** on either minimized VM — don't suggest it for editing files on the VMs directly; use the ArtX-then-scp method instead.
+- Once sentinel-server is migrated too, `.env` (`SENTINEL_SERVER_HOST`) and `docs/vm-access.md` need the same kind of update sentinel-endpoint just got.
+- After both VMs are on the isolated network with static IPs, the v1.1 build plan's next piece is the central record of results on sentinel-server (new code: `record/db.py`) — not started yet.
+- No v1.1 learning log entry written yet — worth adding one covering today's console-indentation lesson before v1.1 is called complete.
+
+
+# Sentinel — Session Handout — 2026-09-05
+
+**Current version/stage:** v1.1, in progress — network migration complete, two-host scanning now working, not yet committed
+
+**Done this session:**
+- Migrated sentinel-server onto the isolated Sentinel-Lab network: shut off VM, switched NIC from `default` (virbr0) to `Sentinel-Lab` (virbr1) in virt-manager, confirmed temporary DHCP address via console (`192.168.100.190`), recorded MAC address (`52:54:00:0d:b5:ab`)
+- Wrote and applied static netplan config for sentinel-server (`192.168.100.10/24`, gateway `192.168.100.1`, DNS `8.8.8.8`/`8.8.4.4`) using the ArtX-then-scp method from BUG-002 — no repeat of the console-indentation bug
+- Confirmed clean SSH reconnect on the new static IP with no password prompt
+- Updated `.env` (`SENTINEL_SERVER_HOST` → `192.168.100.10`) and cleaned up duplicate blank `SENTINEL_ENDPOINT_*` lines that had been left in `.env` from an earlier session
+- Updated `docs/vm-access.md` with both hosts' real IPs, MACs, and a new shared `## Network` section for the Sentinel-Lab subnet/gateway/DNS
+- Both VMs are now fully on Sentinel-Lab with static IPs — network migration portion of v1.1 is complete
+- Re-ran `sentinel scan` against sentinel-server post-migration to confirm nothing broke — same results as before (4/5, known findings only)
+- **Refactored the collector to scan both hosts in one run:**
+  - `policy/engine.py`: `run_all_checks()` now takes `host`, `user`, `ssh_key`, `host_label` as parameters instead of reading `.env` internally
+  - `collector/collector.py`: now loads `.env` itself, defines both hosts, loops over them, prints a separate labeled report per host
+  - Checked `collector/ssh_utils.py` first to confirm `SENTINEL_ENDPOINT_SSH_KEY`'s `~`-path wouldn't break anything — it's fine, `ssh` expands `~` internally regardless of shell
+- Ran the two-host scan for the first time — sentinel-endpoint showed false-positive findings caused by a shared baseline built only from sentinel-server's account name and service list
+- Pulled sentinel-endpoint's real running-services list via `systemctl list-units --type=service --state=running` (not guessed) and restructured `policy/baseline.yml` into per-host sections (`hosts: sentinel-server: / sentinel-endpoint:`), keeping `log_permissions` shared since the journal path pattern is the same on both
+- Identified and documented a real, transient false-positive: `systemd-timedated.service` briefly showed as a finding on sentinel-endpoint because it's D-Bus-activated and gets woken up by the ISM-0988 check's own `timedatectl` call, then stops when idle — deliberately not added to the allow-list since doing so would mask a genuine future activation
+- Re-ran the two-host scan after the baseline fix: sentinel-server unchanged (4/5, known findings), sentinel-endpoint now correctly shows 4/5 with only the genuine open findings (multipathd, snapd) — the account/sudoers false positives are gone
+
+**Currently broken / unresolved:**
+- Nothing broken. bug-report.md still shows 1 bug fixed, 0 open (BUG-001, BUG-002 both FIXED).
+- **Not yet committed** — `git status` shows all of today's changes as modified/untracked, nothing staged yet.
+- **Filename mismatch caught before committing:** the learning-log file got saved locally as `docs/learning-log/v1_0.md` (underscore) instead of the original `v1.0.md` (dot), so git currently shows the original as deleted and the new one as untracked. Needs `mv docs/learning-log/v1_0.md docs/learning-log/v1.0.md` before staging, so git tracks it as one continuous file rather than a delete+add.
+
+**Next step:**
+1. Fix the learning-log filename (`mv` command above), confirm with `git status` that it now shows as modified, not deleted+untracked.
+2. Stage and commit today's changes with an explicit file list (`collector/collector.py`, `policy/engine.py`, `policy/baseline.yml`, `docs/vm-access.md`, `docs/learning-log/v1.0.md`, `docs/handout-latest.md`, `docs/bugs/bug-report.md` — check `git status` again to confirm the full real list before staging, don't assume this one is complete).
+3. After that's pushed: two things remain before v1.1 can be called complete — the deliberate-change detection test on sentinel-endpoint (add a sudo user, confirm the next scan catches it), and building `record/db.py` for a central results record on sentinel-server.
+
+**Anything the next session needs to know before touching code:**
+- **The scanner now requires `host_label` as a 4th argument to `run_all_checks()`** — any future check or script calling it directly (not through `collector.py`) needs updating to match, or it'll throw a `TypeError`.
+- **`policy/baseline.yml` is no longer a flat structure** — accounts/services/sudoers now live under `hosts: <host_label>:`, with only `log_permissions` staying at the top level. Any manual edits to the baseline need to go in the right host's section now.
+- **sentinel-endpoint's real baseline was built from actual `systemctl` output pulled today (2026-09-05)** — same honesty standard as sentinel-server's original baseline, not assumed or copied.
+- `docs/roadmap.md` exists as an untracked file per the last `git status` — not part of today's work, just noting it's sitting there uncommitted if that wasn't intentional.
+- `.env` had duplicate blank `SENTINEL_ENDPOINT_*` lines removed this session — if `.env` ever needs recreating from scratch, don't reintroduce that duplication.
+

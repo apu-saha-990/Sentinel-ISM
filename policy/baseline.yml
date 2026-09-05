@@ -1,46 +1,89 @@
-# ISM-0584 note (2026-08-30): this VM has no rsyslog installed and no
+# ISM-0584 note (2026-08-30): neither VM has rsyslog installed or a
 # /var/log/auth.log file — login events are recorded only via
 # systemd-journald. The ISM-0584 check queries journalctl directly
 # (grep on pam_unix) rather than checking for a flat log file.
 
 log_permissions:
   # ISM-1985 / ISM-1815 target: the systemd journal files, not /var/log/auth.log
-  # (see ISM-0584 note — this system has no rsyslog/auth.log).
-  # Path includes a random per-machine ID directory, so we glob rather than
-  # hardcode the full path.
+  # (see ISM-0584 note above). Path includes a random per-machine ID directory,
+  # so we glob rather than hardcode the full path. Same pattern on both hosts.
   journal_glob: "/var/log/journal/*/*.journal"
 
-accounts:
-  # Any account with a real login shell (/bin/bash, /bin/sh) not in this list is a finding.
-  # System/service accounts (nologin, /bin/false, /bin/sync) are checked structurally,
-  # not by name — a minimized install adds/removes these on its own.
-  allowed_login_shells:
-    - root
-    - sentinel
+hosts:
+  sentinel-server:
+    accounts:
+      # Any account with a real login shell (/bin/bash, /bin/sh) not in this list is a finding.
+      # System/service accounts (nologin, /bin/false, /bin/sync) are checked structurally,
+      # not by name — a minimized install adds/removes these on its own.
+      allowed_login_shells:
+        - root
+        - sentinel
 
-services:
-  # Currently active/running services confirmed as expected on sentinel-server.
-  # multipathd.service and snapd.service are deliberately NOT included below —
-  # they were running at baseline capture time but not yet justified for this VM's role.
-  # Leaving them off means the scanner correctly flags them as findings until a decision is made.
-  allowed_active:
-    - chrony.service
-    - dbus.service
-    - getty@tty1.service
-    - networkd-dispatcher.service
-    - polkit.service
-    - ssh.service
-    - systemd-journald.service
-    - systemd-logind.service
-    - systemd-networkd.service
-    - systemd-resolved.service
-    - systemd-udevd.service
-    - unattended-upgrades.service
-    - user@1000.service
+    services:
+      # Real running-services list pulled from sentinel-server on 2026-08-30.
+      # multipathd.service and snapd.service deliberately NOT included —
+      # running at baseline capture time but not yet justified for this VM's
+      # role. Left off on purpose so the scanner keeps flagging them until a
+      # real decision is made.
+      allowed_active:
+        - chrony.service
+        - dbus.service
+        - getty@tty1.service
+        - networkd-dispatcher.service
+        - polkit.service
+        - ssh.service
+        - systemd-journald.service
+        - systemd-logind.service
+        - systemd-networkd.service
+        - systemd-resolved.service
+        - systemd-udevd.service
+        - unattended-upgrades.service
+        - user@1000.service
 
-sudoers:
-  # Real sudo group membership pulled from sentinel-server on 2026-08-30.
-  # Only 'sentinel' is expected — root has access inherently (not via this group),
-  # and no custom /etc/sudoers.d rules exist beyond Ubuntu's default README.
-  allowed_members:
-    - sentinel
+    sudoers:
+      # Real sudo group membership pulled from sentinel-server on 2026-08-30.
+      # Only 'sentinel' is expected — root has access inherently (not via this
+      # group), and no custom /etc/sudoers.d rules exist beyond Ubuntu's
+      # default README.
+      allowed_members:
+        - sentinel
+
+  sentinel-endpoint:
+    accounts:
+      # Real login account on this host is 'sentinelendpoint', not 'sentinel' —
+      # different username by design, same admin role as sentinel-server's.
+      allowed_login_shells:
+        - root
+        - sentinelendpoint
+
+    services:
+      # Real running-services list pulled from sentinel-endpoint on 2026-09-05.
+      # multipathd.service and snapd.service deliberately NOT included, same
+      # open-decision pattern as sentinel-server.
+      # polkit.service is genuinely NOT running here — real difference from
+      # sentinel-server, not an oversight in this list.
+      # systemd-timedated.service is NOT included: it's D-Bus-activated and
+      # only runs when something calls timedatectl (which the ISM-0988 check
+      # itself does), then stops again once idle. It can appear as a
+      # transient finding if the scan catches it mid-activation — expected
+      # behavior, not a standing extra service, and not added here since
+      # doing so would mask a real unexpected activation later.
+      allowed_active:
+        - chrony.service
+        - dbus.service
+        - getty@tty1.service
+        - networkd-dispatcher.service
+        - ssh.service
+        - systemd-journald.service
+        - systemd-logind.service
+        - systemd-networkd.service
+        - systemd-resolved.service
+        - systemd-udevd.service
+        - unattended-upgrades.service
+        - user@1000.service
+
+    sudoers:
+      # Real sudo group membership pulled from sentinel-endpoint on 2026-09-05.
+      # Only 'sentinelendpoint' is expected — same reasoning as sentinel-server.
+      allowed_members:
+        - sentinelendpoint
